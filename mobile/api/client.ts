@@ -2,7 +2,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const client = axios.create({
-  baseURL: 'http://10.0.2.2:5000/api', // For Android emulator. Use your IP for physical device.
+  baseURL: 'http://192.168.1.53:5000/api', // Updated for physical device
   timeout: 10000,
 });
 
