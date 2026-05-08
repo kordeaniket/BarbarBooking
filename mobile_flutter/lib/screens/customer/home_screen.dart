@@ -1,0 +1,126 @@
+import 'package:flutter/material.dart';
+import 'package:lucide_icons/lucide_icons.dart';
+import '../../models/barber.dart';
+import '../../services/api_service.dart';
+import '../../theme/app_theme.dart';
+import '../../widgets/barber_card.dart';
+
+class CustomerHomeScreen extends StatefulWidget {
+  const CustomerHomeScreen({super.key});
+
+  @override
+  State<CustomerHomeScreen> createState() => _CustomerHomeScreenState();
+}
+
+class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
+  final ApiService _apiService = ApiService();
+  List<Barber> _barbers = [];
+  List<Barber> _filteredBarbers = [];
+  bool _isLoading = true;
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBarbers();
+  }
+
+  Future<void> _loadBarbers() async {
+    setState(() => _isLoading = true);
+    final barbers = await _apiService.fetchBarbers();
+    setState(() {
+      _barbers = barbers;
+      _filteredBarbers = barbers;
+      _isLoading = false;
+    });
+  }
+
+  void _handleSearch(String query) {
+    setState(() {
+      if (query.isEmpty) {
+        _filteredBarbers = _barbers;
+      } else {
+        _filteredBarbers = _barbers.where((barber) {
+          final shopName = barber.shopName.toLowerCase();
+          final city = barber.location.city.toLowerCase();
+          final searchLower = query.toLowerCase();
+          return shopName.contains(searchLower) || city.contains(searchLower);
+        }).toList();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Column(
+        children: [
+          _buildHeader(),
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator(color: AppTheme.accentColor))
+                : RefreshIndicator(
+                    onRefresh: _loadBarbers,
+                    color: AppTheme.accentColor,
+                    child: _filteredBarbers.isEmpty
+                        ? _buildEmptyState()
+                        : ListView.builder(
+                            padding: const EdgeInsets.all(20),
+                            itemCount: _filteredBarbers.length,
+                            itemBuilder: (context, index) {
+                              return BarberCard(
+                                barber: _filteredBarbers[index],
+                                onTap: () {
+                                  // Navigate to details
+                                },
+                              );
+                            },
+                          ),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(24, 60, 24, 24),
+      decoration: const BoxDecoration(
+        color: AppTheme.cardColor,
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(24),
+          bottomRight: Radius.circular(24),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Find a Barber',
+            style: Theme.of(context).textTheme.headlineMedium,
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _searchController,
+            onChanged: _handleSearch,
+            style: const TextStyle(color: AppTheme.textColor),
+            decoration: const InputDecoration(
+              hintText: 'Search by shop or city',
+              prefixIcon: Icon(LucideIcons.search, size: 20),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return const Center(
+      child: Text(
+        'No barbers found in this area',
+        style: TextStyle(color: AppTheme.mutedTextColor, fontSize: 16),
+      ),
+    );
+  }
+}
