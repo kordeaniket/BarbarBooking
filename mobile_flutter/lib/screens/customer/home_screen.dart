@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:provider/provider.dart';
 import '../../models/barber.dart';
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/barber_card.dart';
+import '../../widgets/booking_card.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/booking_provider.dart';
+import 'barber_details_screen.dart';
 
 class CustomerHomeScreen extends StatefulWidget {
   const CustomerHomeScreen({super.key});
@@ -17,22 +22,32 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   List<Barber> _barbers = [];
   List<Barber> _filteredBarbers = [];
   bool _isLoading = true;
+  int _selectedIndex = 0;
   final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _loadBarbers();
+    _refreshBookings();
   }
 
   Future<void> _loadBarbers() async {
     setState(() => _isLoading = true);
-    final barbers = await _apiService.fetchBarbers();
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final barbers = await _apiService.fetchBarbers(auth.token ?? '');
     setState(() {
       _barbers = barbers;
       _filteredBarbers = barbers;
       _isLoading = false;
     });
+  }
+
+  Future<void> _refreshBookings() async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    if (auth.token != null) {
+      await Provider.of<BookingProvider>(context, listen: false).fetchBookings(auth.token!);
+    }
   }
 
   void _handleSearch(String query) {
@@ -56,32 +71,103 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
       body: Column(
         children: [
           _buildHeader(),
-          Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator(color: AppTheme.accentColor))
-                : RefreshIndicator(
-                    onRefresh: _loadBarbers,
-                    color: AppTheme.accentColor,
-                    child: _filteredBarbers.isEmpty
-                        ? _buildEmptyState()
-                        : ListView.builder(
-                            padding: const EdgeInsets.all(20),
-                            itemCount: _filteredBarbers.length,
-                            itemBuilder: (context, index) {
-                              return BarberCard(
-                                barber: _filteredBarbers[index],
-                                onTap: () {
-                                  // Navigate to details
-                                },
-                              );
-                            },
-                          ),
-                  ),
+          Expanded(child: _buildBody()),
+        ],
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: (index) => setState(() => _selectedIndex = index),
+        backgroundColor: AppTheme.cardColor,
+        selectedItemColor: AppTheme.accentColor,
+        unselectedItemColor: AppTheme.secondaryTextColor,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(LucideIcons.search),
+            label: 'Explore',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(LucideIcons.calendar),
+            label: 'My Bookings',
           ),
         ],
       ),
     );
   }
+
+  Widget _buildBody() {
+    if (_selectedIndex == 0) {
+      return _isLoading
+          ? const Center(child: CircularProgressIndicator(color: AppTheme.accentColor))
+          : RefreshIndicator(
+              onRefresh: _loadBarbers,
+              color: AppTheme.accentColor,
+              child: _filteredBarbers.isEmpty
+                  ? _buildEmptyState()
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(20),
+                      itemCount: _filteredBarbers.length,
+                      itemBuilder: (context, index) {
+                        return BarberCard(
+                          barber: _filteredBarbers[index],
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => BarberDetailsScreen(barber: _filteredBarbers[index]),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+            );
+    } else {
+      return _buildMyBookingsTab();
+    }
+  }
+
+  Widget _buildMyBookingsTab() {
+    return Consumer<BookingProvider>(
+      builder: (context, provider, _) {
+        if (provider.isLoading) {
+          return const Center(child: CircularProgressIndicator(color: AppTheme.accentColor));
+        }
+
+        final bookings = provider.bookings;
+
+        if (bookings.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(LucideIcons.calendar, size: 64, color: AppTheme.mutedTextColor.withOpacity(0.5)),
+                const SizedBox(height: 16),
+                const Text('No bookings found', style: TextStyle(color: AppTheme.secondaryTextColor)),
+                const SizedBox(height: 8),
+                TextButton(onPressed: _refreshBookings, child: const Text('Refresh')),
+              ],
+            ),
+          );
+        }
+
+        return RefreshIndicator(
+          onRefresh: _refreshBookings,
+          child: ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: bookings.length,
+            itemBuilder: (context, index) {
+              final booking = bookings[index];
+              return BookingCard(
+                booking: booking,
+                showActions: false, // Customer can't approve/reject their own bookings
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+// ...
 
   Widget _buildHeader() {
     return Container(
@@ -96,9 +182,18 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Find a Barber',
-            style: Theme.of(context).textTheme.headlineMedium,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Find a Barber',
+                style: Theme.of(context).textTheme.headlineMedium,
+              ),
+              IconButton(
+                icon: const Icon(LucideIcons.logOut, color: AppTheme.secondaryTextColor),
+                onPressed: () => Provider.of<AuthProvider>(context, listen: false).logout(),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
           TextField(

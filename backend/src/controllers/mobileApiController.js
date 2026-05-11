@@ -1,6 +1,7 @@
 import Barber from '../models/Barber.js';
 import Booking from '../models/Booking.js';
 import Transaction from '../models/Transaction.js';
+import Service from '../models/Service.js';
 
 // @desc    Get active barbers
 // @route   GET /api/mobile/barbers
@@ -107,10 +108,77 @@ export const updateBookingStatus = async (req, res) => {
 
     // MOCK PUSH NOTIFICATION
     if (req.user.role === 'barber') {
-       console.log(`[PUSH NOTIFICATION] To Customer ${booking.customer}: Your booking has been ${status} by the barber.`);
+      console.log(`[PUSH NOTIFICATION] To Customer ${booking.customer}: Your booking has been ${status} by the barber.`);
     }
 
     res.json(booking);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Create barber specific service
+// @route   POST /api/mobile/barber/services
+// @access  Private (Barber)
+export const createBarberService = async (req, res) => {
+  const { name, description, defaultPrice, durationMinutes } = req.body;
+  try {
+    const service = await Service.create({
+      name,
+      description,
+      defaultPrice,
+      durationMinutes,
+      barber: req.user._id
+    });
+
+    console.log('Service created:', service._id);
+
+    const updatedBarber = await Barber.findByIdAndUpdate(req.user._id, {
+      $push: { services: service._id }
+    }, { new: true });
+
+    console.log('Barber updated. Services count:', updatedBarber.services.length);
+
+    res.status(201).json(service);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Get available slots for a barber on a date
+// @route   GET /api/mobile/barbers/:id/slots
+// @access  Private
+export const getAvailableSlots = async (req, res) => {
+  const { date, serviceId } = req.query;
+  try {
+    const service = await Service.findById(serviceId);
+    if (!service) return res.status(404).json({ message: 'Service not found' });
+
+    const duration = service.durationMinutes;
+    const bookings = await Booking.find({
+      barber: req.params.id,
+      date: new Date(date),
+      status: { $in: ['pending', 'confirmed'] }
+    });
+
+    // Simple slot generation: 09:00 to 18:00
+    const startHour = 9;
+    const endHour = 18;
+    const slots = [];
+
+    for (let hour = startHour; hour < endHour; hour++) {
+      for (let min = 0; min < 60; min += 30) {
+        const time = `${hour.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`;
+
+        // Check if slot overlaps with any booking
+        const isOccupied = bookings.some(b => b.startTime === time);
+        if (!isOccupied) {
+          slots.push(time);
+        }
+      }
+    }
+
+    res.json(slots);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

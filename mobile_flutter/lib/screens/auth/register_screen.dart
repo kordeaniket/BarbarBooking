@@ -67,6 +67,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _isLoading = false);
 
     if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Registration successful! Please login to continue.'),
+          backgroundColor: Colors.green,
+        ),
+      );
       Navigator.pop(context);
     } else {
       _showError('Registration failed. Check your data or try a different email.');

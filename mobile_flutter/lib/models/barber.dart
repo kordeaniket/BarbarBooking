@@ -2,11 +2,13 @@ class Service {
   final String id;
   final String name;
   final double defaultPrice;
+  final int durationMinutes;
 
   Service({
     required this.id,
     required this.name,
     required this.defaultPrice,
+    required this.durationMinutes,
   });
 
   factory Service.fromJson(Map<String, dynamic> json) {
@@ -14,6 +16,7 @@ class Service {
       id: json['_id'] ?? '',
       name: json['name'] ?? '',
       defaultPrice: (json['defaultPrice'] ?? 0).toDouble(),
+      durationMinutes: json['durationMinutes'] ?? 30,
     );
   }
 }

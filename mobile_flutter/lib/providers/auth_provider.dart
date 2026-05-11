@@ -14,6 +14,7 @@ class AuthProvider with ChangeNotifier {
   String? get token => _token;
   String? get userName => _userName;
   String? get role => _role;
+  String? get userId => _userId;
 
   Future<bool> login(String email, String password, {bool isBarber = false}) async {
     final endpoint = isBarber ? '/api/mobile/auth/barber/login' : '/api/mobile/auth/customer/login';
@@ -82,19 +83,7 @@ class AuthProvider with ChangeNotifier {
       );
 
       if (response.statusCode == 201) {
-        final data = jsonDecode(response.body);
-        _token = data['token'];
-        _userId = data['_id'];
-        _userName = data['name'];
-        _role = data['role'];
-        
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('token', _token!);
-        await prefs.setString('userId', _userId!);
-        await prefs.setString('userName', _userName!);
-        await prefs.setString('role', _role!);
-        
-        notifyListeners();
+        // Redirect to login for all roles after registration as per user request
         return true;
       }
       return false;
