@@ -145,6 +145,45 @@ export const createBarberService = async (req, res) => {
   }
 };
 
+// @desc    Update payment status
+// @route   PUT /api/mobile/bookings/:id/payment
+// @access  Private (Barber)
+export const updatePaymentStatus = async (req, res) => {
+  try {
+    const { paymentStatus, paymentType } = req.body;
+    
+    // Find booking and populate service to get price
+    const booking = await Booking.findById(req.params.id).populate('service');
+    
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+
+    booking.paymentStatus = paymentStatus;
+    if (paymentStatus === 'received') {
+      booking.status = 'completed'; // Auto-complete booking when paid
+    }
+    
+    await booking.save();
+
+    // Create a transaction record if payment was received
+    if (paymentStatus === 'received') {
+      await Transaction.create({
+        booking: booking._id,
+        barber: booking.barber,
+        customer: booking.customer,
+        amount: booking.service.defaultPrice,
+        paymentType: paymentType || 'cash',
+        status: 'completed'
+      });
+    }
+
+    res.json(booking);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // @desc    Update barber service
 // @route   PUT /api/mobile/barber/services/:id
 // @access  Private (Barber)
@@ -244,6 +283,28 @@ export const getAvailableSlots = async (req, res) => {
     }
 
     res.json(slots);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Get user transactions
+// @route   GET /api/mobile/transactions
+// @access  Private
+export const getUserTransactions = async (req, res) => {
+  try {
+    const filter = req.user.role === 'barber' ? { barber: req.user._id } : { customer: req.user._id };
+    
+    const transactions = await Transaction.find(filter)
+      .populate('barber', 'name shopName')
+      .populate('customer', 'name mobile')
+      .populate({
+        path: 'booking',
+        populate: { path: 'service' }
+      })
+      .sort({ createdAt: -1 });
+
+    res.json(transactions);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

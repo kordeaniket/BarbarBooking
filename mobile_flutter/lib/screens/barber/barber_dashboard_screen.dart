@@ -72,6 +72,99 @@ class _BarberDashboardScreenState extends State<BarberDashboardScreen> {
     }
   }
 
+  void _showPaymentSelectionDialog(String bookingId) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(24),
+        decoration: const BoxDecoration(
+          color: AppTheme.cardColor,
+          borderRadius: BorderRadius.only(topLeft: Radius.circular(32), topRight: Radius.circular(32)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Select Payment Method',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textColor),
+            ),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildPaymentOption(
+                    icon: LucideIcons.banknote,
+                    label: 'Cash',
+                    color: Colors.green,
+                    onTap: () {
+                      Navigator.pop(context);
+                      _handlePaymentUpdate(bookingId, 'received', 'cash');
+                    },
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _buildPaymentOption(
+                    icon: LucideIcons.creditCard,
+                    label: 'Online',
+                    color: Colors.blue,
+                    onTap: () {
+                      Navigator.pop(context);
+                      _handlePaymentUpdate(bookingId, 'received', 'online');
+                    },
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPaymentOption({required IconData icon, required String label, required Color color, required VoidCallback onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: color.withOpacity(0.3)),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, size: 32, color: color),
+            const SizedBox(height: 8),
+            Text(label, style: TextStyle(color: color, fontWeight: FontWeight.bold)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _handlePaymentUpdate(String bookingId, String status, String type) async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final success = await _apiService.updatePaymentStatus(auth.token!, bookingId, status, type);
+    
+    if (success) {
+      _refreshBookings();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Payment via ${type.toUpperCase()} recorded successfully'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to update payment status')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -140,13 +233,9 @@ class _BarberDashboardScreenState extends State<BarberDashboardScreen> {
               border: Border.all(color: Theme.of(context).dividerColor),
             ),
             child: ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: AppTheme.accentColor.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
-                child: const Icon(LucideIcons.scissors, color: AppTheme.accentColor, size: 20),
-              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               title: Text(service.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: Text('${service.durationMinutes} min • ₹${service.defaultPrice.toStringAsFixed(0)}'),
+              subtitle: Text('₹${service.defaultPrice.toStringAsFixed(0)} • ${service.durationMinutes} min'),
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -308,6 +397,7 @@ class _BarberDashboardScreenState extends State<BarberDashboardScreen> {
               booking: pending[index],
               showActions: true,
               onStatusUpdate: (status) => _handleStatusUpdate(pending[index].id, status),
+              onPaymentReceived: () => _showPaymentSelectionDialog(pending[index].id),
             ),
           ),
         );
@@ -348,7 +438,12 @@ class _BarberDashboardScreenState extends State<BarberDashboardScreen> {
                   : ListView.builder(
                       padding: const EdgeInsets.all(16),
                       itemCount: dayBookings.length,
-                      itemBuilder: (context, index) => BookingCard(booking: dayBookings[index], showActions: false),
+                      itemBuilder: (context, index) => BookingCard(
+                        booking: dayBookings[index], 
+                        showActions: true, // Show actions in schedule too for payment
+                        onPaymentReceived: () => _showPaymentSelectionDialog(dayBookings[index].id),
+                        onStatusUpdate: (status) => _handleStatusUpdate(dayBookings[index].id, status),
+                      ),
                     ),
             ),
           ],

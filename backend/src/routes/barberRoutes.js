@@ -1,5 +1,5 @@
 import express from 'express';
-import { createBarber, getBarbers } from '../controllers/barberController.js';
+import { createBarber, getBarbers, updateBarber, deleteBarber, approveBarber } from '../controllers/barberController.js';
 import { protect } from '../middleware/authMiddleware.js';
 import multer from 'multer';
 import path from 'path';
@@ -19,5 +19,12 @@ const upload = multer({ storage });
 router.route('/')
   .post(protect, upload.single('profilePhoto'), createBarber)
   .get(protect, getBarbers);
+
+router.route('/:id')
+  .put(protect, upload.single('profilePhoto'), updateBarber)
+  .delete(protect, deleteBarber);
+
+router.route('/:id/approve')
+  .put(protect, approveBarber);
 
 export default router;

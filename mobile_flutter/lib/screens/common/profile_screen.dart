@@ -4,6 +4,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../theme/app_theme.dart';
+import 'transaction_history_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -102,6 +103,36 @@ class ProfileScreen extends StatelessWidget {
               auth.location != null ? "${auth.location!['address']}, ${auth.location!['city']}" : 'N/A'
             ),
           ],
+          const Divider(height: 32),
+          InkWell(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const TransactionHistoryScreen()),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.purple.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(LucideIcons.history, size: 20, color: Colors.purple),
+                ),
+                const SizedBox(width: 16),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Payment History', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                      Text('View your past transactions', style: TextStyle(color: AppTheme.secondaryTextColor, fontSize: 12)),
+                    ],
+                  ),
+                ),
+                const Icon(LucideIcons.chevronRight, size: 20, color: AppTheme.secondaryTextColor),
+              ],
+            ),
+          ),
         ],
       ),
     );

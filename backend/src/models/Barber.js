@@ -15,6 +15,7 @@ const barberSchema = new mongoose.Schema({
   businessLicense: { type: String, required: true },
   profilePhoto: { type: String }, // path to the uploaded image
   services: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Service' }],
+  isApproved: { type: Boolean, default: false },
   fcmToken: { type: String } // Firebase Cloud Messaging Token
 }, { timestamps: true });
 

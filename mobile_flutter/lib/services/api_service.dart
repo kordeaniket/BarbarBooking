@@ -138,4 +138,41 @@ class ApiService {
       return false;
     }
   }
+
+  Future<bool> updatePaymentStatus(String token, String bookingId, String paymentStatus, String paymentType) async {
+    try {
+      final response = await http.put(
+        Uri.parse('$baseUrl/api/mobile/bookings/$bookingId/payment'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: json.encode({
+          'paymentStatus': paymentStatus,
+          'paymentType': paymentType
+        }),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      print('Error updating payment status: $e');
+      return false;
+    }
+  }
+
+  Future<List<dynamic>> fetchTransactions(String token) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/mobile/transactions'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      }
+      return [];
+    } catch (e) {
+      print('Error fetching transactions: $e');
+      return [];
+    }
+  }
 }

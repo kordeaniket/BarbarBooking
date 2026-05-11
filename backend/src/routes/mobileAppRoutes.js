@@ -5,10 +5,12 @@ import {
   createBooking, 
   getBookingHistory, 
   updateBookingStatus,
+  updatePaymentStatus,
   createBarberService,
   updateBarberService,
   deleteBarberService,
-  getAvailableSlots
+  getAvailableSlots,
+  getUserTransactions
 } from '../controllers/mobileApiController.js';
 import { protectMobile } from '../middleware/authMiddleware.js';
 
@@ -18,6 +20,8 @@ router.get('/barbers', protectMobile, getActiveBarbers);
 router.get('/barbers/:id', protectMobile, getBarberDetails);
 router.get('/barbers/:id/slots', protectMobile, getAvailableSlots);
 
+router.get('/transactions', protectMobile, getUserTransactions);
+
 router.post('/barber/services', protectMobile, createBarberService);
 router.put('/barber/services/:id', protectMobile, updateBarberService);
 router.delete('/barber/services/:id', protectMobile, deleteBarberService);
@@ -25,5 +29,6 @@ router.delete('/barber/services/:id', protectMobile, deleteBarberService);
 router.post('/bookings', protectMobile, createBooking);
 router.get('/bookings/history', protectMobile, getBookingHistory);
 router.put('/bookings/:id/status', protectMobile, updateBookingStatus);
+router.put('/bookings/:id/payment', protectMobile, updatePaymentStatus);
 
 export default router;

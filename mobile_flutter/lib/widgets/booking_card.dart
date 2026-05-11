@@ -9,12 +9,14 @@ class BookingCard extends StatelessWidget {
   final Booking booking;
   final bool showActions;
   final Function(String)? onStatusUpdate;
+  final VoidCallback? onPaymentReceived;
 
   const BookingCard({
     super.key,
     required this.booking,
     this.showActions = false,
     this.onStatusUpdate,
+    this.onPaymentReceived,
   });
 
   Color _getStatusColor() {
@@ -39,7 +41,6 @@ class BookingCard extends StatelessWidget {
   }
 
   Future<void> _launchWhatsApp(String phoneNumber, String message) async {
-    // Clean phone number (remove +, spaces, etc if needed, but WhatsApp likes +CountryCodeNumber)
     final url = "https://wa.me/$phoneNumber?text=${Uri.encodeComponent(message)}";
     final Uri launchUri = Uri.parse(url);
     if (await canLaunchUrl(launchUri)) {
@@ -49,6 +50,8 @@ class BookingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isReceived = booking.paymentStatus == 'received';
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(20),
@@ -66,16 +69,39 @@ class BookingCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: _getStatusColor().withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  booking.status.toUpperCase(),
-                  style: TextStyle(color: _getStatusColor(), fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1),
-                ),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: _getStatusColor().withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      booking.status.toUpperCase(),
+                      style: TextStyle(color: _getStatusColor(), fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  if (isReceived)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(LucideIcons.checkCircle, size: 10, color: Colors.green),
+                          SizedBox(width: 4),
+                          Text(
+                            'PAID',
+                            style: TextStyle(color: Colors.green, fontSize: 10, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
               ),
               Text(
                 '₹${booking.servicePrice.toStringAsFixed(0)}',
@@ -109,7 +135,6 @@ class BookingCard extends StatelessWidget {
                   ],
                 ),
               ),
-              // Communication Buttons
               Row(
                 children: [
                   _buildCircleButton(
@@ -140,46 +165,62 @@ class BookingCard extends StatelessWidget {
               _buildMetaInfo(LucideIcons.clock, booking.startTime),
             ],
           ),
-          if (showActions && booking.status == 'pending') ...[
+          if (showActions) ...[
             const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () => onStatusUpdate?.call('rejected'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red.withOpacity(0.1),
-                      foregroundColor: Colors.red,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+            if (booking.status == 'pending')
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => onStatusUpdate?.call('rejected'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red.withOpacity(0.1),
+                        foregroundColor: Colors.red,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: const Text('Reject', style: TextStyle(fontWeight: FontWeight.bold)),
                     ),
-                    child: const Text('Reject', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        onStatusUpdate?.call('confirmed');
+                        _launchWhatsApp(
+                          booking.customerMobile, 
+                          "Hello ${booking.customerName}, your booking for ${booking.serviceName} on ${DateFormat('d MMM').format(booking.date)} at ${booking.startTime} has been CONFIRMED. See you soon!"
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.accentColor,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: const Text('Approve', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              )
+            else if (booking.status == 'confirmed' && !isReceived)
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: onPaymentReceived,
+                  icon: const Icon(LucideIcons.indianRupee, size: 16),
+                  label: const Text('Mark Payment Received', style: TextStyle(fontWeight: FontWeight.bold)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      onStatusUpdate?.call('confirmed');
-                      // Auto-send WhatsApp confirmation
-                      _launchWhatsApp(
-                        booking.customerMobile, 
-                        "Hello ${booking.customerName}, your booking for ${booking.serviceName} on ${DateFormat('d MMM').format(booking.date)} at ${booking.startTime} has been CONFIRMED. See you soon!"
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.accentColor,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                    child: const Text('Approve', style: TextStyle(fontWeight: FontWeight.bold)),
-                  ),
-                ),
-              ],
-            ),
+              ),
           ],
         ],
       ),

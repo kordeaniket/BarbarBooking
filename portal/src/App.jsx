@@ -6,6 +6,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import SidebarLayout from './components/SidebarLayout';
 import BarberList from './pages/Barbers/BarberList';
 import CreateBarber from './pages/Barbers/CreateBarber';
+import EditBarber from './pages/Barbers/EditBarber';
 import TransactionList from './pages/Transactions/TransactionList';
 
 function App() {
@@ -19,6 +20,7 @@ function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/barbers" element={<BarberList />} />
             <Route path="/barbers/create" element={<CreateBarber />} />
+            <Route path="/barbers/edit/:id" element={<EditBarber />} />
             <Route path="/transactions" element={<TransactionList />} />
           </Route>
           

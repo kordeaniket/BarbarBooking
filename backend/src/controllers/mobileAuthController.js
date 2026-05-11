@@ -85,6 +85,10 @@ export const loginBarber = async (req, res) => {
 
     // Since we auto-generated passwords and hashed them via pre-save, we compare here
     if (barber && (await barber.matchPassword(password))) {
+      if (!barber.isApproved) {
+        return res.status(403).json({ message: 'Your account is pending approval from the admin.' });
+      }
+      
       if (fcmToken) {
         barber.fcmToken = fcmToken;
         await barber.save();
