@@ -261,8 +261,8 @@ class _BarberDashboardScreenState extends State<BarberDashboardScreen> {
               final booking = pending[index];
               return BookingCard(
                 booking: booking,
-                onApprove: () => _handleStatusUpdate(booking.id, 'confirmed'),
-                onReject: () => _handleStatusUpdate(booking.id, 'cancelled'),
+                showActions: true,
+                onStatusUpdate: (status) => _handleStatusUpdate(booking.id, status),
               );
             },
           ),

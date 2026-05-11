@@ -65,7 +65,6 @@ class BarberCard extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: Colors.black.withOpacity(0.6),
                       borderRadius: BorderRadius.circular(12),
-                      backdropFilter: const ColorFilter.mode(Colors.black26, BlendMode.darken),
                     ),
                     child: const Row(
                       children: [
