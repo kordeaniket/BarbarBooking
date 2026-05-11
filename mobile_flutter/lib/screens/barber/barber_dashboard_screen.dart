@@ -88,7 +88,8 @@ class _BarberDashboardScreenState extends State<BarberDashboardScreen> {
       ),
       floatingActionButton: _selectedIndex == 2 
         ? FloatingActionButton(
-            onPressed: () => _showServiceDialog(),
+            onPressed: () => _showServiceSheet(),
+            backgroundColor: AppTheme.accentColor,
             child: const Icon(LucideIcons.plus, color: Colors.white),
           )
         : null,
@@ -131,10 +132,19 @@ class _BarberDashboardScreenState extends State<BarberDashboardScreen> {
         itemCount: _services.length,
         itemBuilder: (context, index) {
           final service = _services[index];
-          return Card(
+          return Container(
             margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardColor,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Theme.of(context).dividerColor),
+            ),
             child: ListTile(
-              leading: const Icon(LucideIcons.scissors, color: AppTheme.accentColor),
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(color: AppTheme.accentColor.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                child: const Icon(LucideIcons.scissors, color: AppTheme.accentColor, size: 20),
+              ),
               title: Text(service.name, style: const TextStyle(fontWeight: FontWeight.bold)),
               subtitle: Text('${service.durationMinutes} min • ₹${service.defaultPrice.toStringAsFixed(0)}'),
               trailing: Row(
@@ -142,7 +152,7 @@ class _BarberDashboardScreenState extends State<BarberDashboardScreen> {
                 children: [
                   IconButton(
                     icon: const Icon(LucideIcons.edit3, size: 20, color: AppTheme.secondaryTextColor),
-                    onPressed: () => _showServiceDialog(service: service),
+                    onPressed: () => _showServiceSheet(service: service),
                   ),
                   IconButton(
                     icon: const Icon(LucideIcons.trash2, size: 20, color: Colors.red),
@@ -157,51 +167,104 @@ class _BarberDashboardScreenState extends State<BarberDashboardScreen> {
     );
   }
 
-  void _showServiceDialog({Service? service}) {
+  void _showServiceSheet({Service? service}) {
     final nameController = TextEditingController(text: service?.name);
     final priceController = TextEditingController(text: service?.defaultPrice.toStringAsFixed(0));
     final durationController = TextEditingController(text: service?.durationMinutes.toString());
 
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(service == null ? 'Add Service' : 'Edit Service'),
-        content: Column(
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom + 32,
+          top: 32,
+          left: 24,
+          right: 24,
+        ),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: const BorderRadius.only(topLeft: Radius.circular(32), topRight: Radius.circular(32)),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 20, offset: const Offset(0, -5))],
+        ),
+        child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            TextField(controller: nameController, decoration: const InputDecoration(labelText: 'Service Name')),
-            TextField(controller: priceController, decoration: const InputDecoration(labelText: 'Price (₹)'), keyboardType: TextInputType.number),
-            TextField(controller: durationController, decoration: const InputDecoration(labelText: 'Duration (min)'), keyboardType: TextInputType.number),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  service == null ? 'Add New Service' : 'Edit Service',
+                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                ),
+                IconButton(icon: const Icon(LucideIcons.x), onPressed: () => Navigator.pop(context)),
+              ],
+            ),
+            const SizedBox(height: 24),
+            _buildInputField(controller: nameController, label: 'Service Name', hint: 'e.g. Premium Haircut', icon: LucideIcons.scissors),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(child: _buildInputField(controller: priceController, label: 'Price (₹)', hint: '500', icon: LucideIcons.banknote, keyboardType: TextInputType.number)),
+                const SizedBox(width: 16),
+                Expanded(child: _buildInputField(controller: durationController, label: 'Duration (min)', hint: '30', icon: LucideIcons.clock, keyboardType: TextInputType.number)),
+              ],
+            ),
+            const SizedBox(height: 40),
+            SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: ElevatedButton(
+                onPressed: () async {
+                  final auth = Provider.of<AuthProvider>(context, listen: false);
+                  final data = {
+                    'name': nameController.text,
+                    'defaultPrice': double.parse(priceController.text),
+                    'durationMinutes': int.parse(durationController.text),
+                  };
+
+                  bool success;
+                  if (service == null) {
+                    success = await _apiService.createService(auth.token!, data);
+                  } else {
+                    success = await _apiService.updateService(auth.token!, service.id, data);
+                  }
+
+                  if (success) {
+                    Navigator.pop(context);
+                    _refreshServices();
+                  }
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentColor, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+                child: Text(service == null ? 'Create Service' : 'Save Changes', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+              ),
+            ),
           ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () async {
-              final auth = Provider.of<AuthProvider>(context, listen: false);
-              final data = {
-                'name': nameController.text,
-                'defaultPrice': double.parse(priceController.text),
-                'durationMinutes': int.parse(durationController.text),
-              };
-
-              bool success;
-              if (service == null) {
-                success = await _apiService.createService(auth.token!, data);
-              } else {
-                success = await _apiService.updateService(auth.token!, service.id, data);
-              }
-
-              if (success) {
-                Navigator.pop(context);
-                _refreshServices();
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(service == null ? 'Service added' : 'Service updated')));
-              }
-            },
-            child: Text(service == null ? 'Add' : 'Save'),
-          ),
-        ],
       ),
+    );
+  }
+
+  Widget _buildInputField({required TextEditingController controller, required String label, required String hint, required IconData icon, TextInputType keyboardType = TextInputType.text}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: TextStyle(color: Theme.of(context).hintColor, fontSize: 12, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        TextField(
+          controller: controller,
+          keyboardType: keyboardType,
+          decoration: InputDecoration(
+            hintText: hint,
+            prefixIcon: Icon(icon, size: 20, color: AppTheme.accentColor),
+            filled: true,
+            fillColor: Theme.of(context).scaffoldBackgroundColor,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+          ),
+        ),
+      ],
     );
   }
 
@@ -220,7 +283,6 @@ class _BarberDashboardScreenState extends State<BarberDashboardScreen> {
               if (success) {
                 Navigator.pop(context);
                 _refreshServices();
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Service deleted')));
               }
             },
             child: const Text('Delete', style: TextStyle(color: Colors.red)),

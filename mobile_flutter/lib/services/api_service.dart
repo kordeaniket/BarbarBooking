@@ -107,6 +107,8 @@ class ApiService {
       print('Error fetching barber services: $e');
       return [];
     }
+  }
+
   Future<bool> updateService(String token, String serviceId, Map<String, dynamic> serviceData) async {
     try {
       final response = await http.put(

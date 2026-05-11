@@ -136,6 +136,8 @@ export const registerBarber = async (req, res) => {
         name: barber.name,
         shopName: barber.shopName,
         email: barber.email,
+        mobile: barber.mobile,
+        location: barber.location,
         role: 'barber',
         token: generateToken(barber._id, 'barber'),
       });

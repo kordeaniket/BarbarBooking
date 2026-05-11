@@ -9,6 +9,9 @@ class AuthProvider with ChangeNotifier {
   String? _userId;
   String? _userName;
   String? _role;
+  String? _mobile;
+  String? _shopName;
+  Map<String, dynamic>? _location;
 
   bool get isAuthenticated => _token != null;
   String? get token => _token;
@@ -16,6 +19,9 @@ class AuthProvider with ChangeNotifier {
   String? get name => _userName;
   String? get role => _role;
   String? get userId => _userId;
+  String? get mobile => _mobile;
+  String? get shopName => _shopName;
+  Map<String, dynamic>? get location => _location;
 
   Future<bool> login(String email, String password, {bool isBarber = false}) async {
     final endpoint = isBarber ? '/api/mobile/auth/barber/login' : '/api/mobile/auth/customer/login';
@@ -33,12 +39,18 @@ class AuthProvider with ChangeNotifier {
         _userId = data['_id'];
         _userName = data['name'];
         _role = data['role'];
+        _mobile = data['mobile'];
+        _shopName = data['shopName'];
+        _location = data['location'];
         
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('token', _token!);
         await prefs.setString('userId', _userId!);
         await prefs.setString('userName', _userName!);
         await prefs.setString('role', _role!);
+        if (_mobile != null) await prefs.setString('mobile', _mobile!);
+        if (_shopName != null) await prefs.setString('shopName', _shopName!);
+        if (_location != null) await prefs.setString('location', jsonEncode(_location));
         
         notifyListeners();
         return true;
@@ -84,7 +96,6 @@ class AuthProvider with ChangeNotifier {
       );
 
       if (response.statusCode == 201) {
-        // Redirect to login for all roles after registration as per user request
         return true;
       }
       return false;
@@ -99,6 +110,9 @@ class AuthProvider with ChangeNotifier {
     _userId = null;
     _userName = null;
     _role = null;
+    _mobile = null;
+    _shopName = null;
+    _location = null;
     
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
@@ -113,6 +127,11 @@ class AuthProvider with ChangeNotifier {
     _userId = prefs.getString('userId');
     _userName = prefs.getString('userName');
     _role = prefs.getString('role');
+    _mobile = prefs.getString('mobile');
+    _shopName = prefs.getString('shopName');
+    final locStr = prefs.getString('location');
+    if (locStr != null) _location = jsonDecode(locStr);
+    
     notifyListeners();
   }
 }

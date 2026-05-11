@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/booking.dart';
 import '../theme/app_theme.dart';
 
@@ -24,6 +25,25 @@ class BookingCard extends StatelessWidget {
       case 'cancelled':
       case 'rejected': return Colors.red;
       default: return AppTheme.secondaryTextColor;
+    }
+  }
+
+  Future<void> _makePhoneCall(String phoneNumber) async {
+    final Uri launchUri = Uri(
+      scheme: 'tel',
+      path: phoneNumber,
+    );
+    if (await canLaunchUrl(launchUri)) {
+      await launchUrl(launchUri);
+    }
+  }
+
+  Future<void> _launchWhatsApp(String phoneNumber, String message) async {
+    // Clean phone number (remove +, spaces, etc if needed, but WhatsApp likes +CountryCodeNumber)
+    final url = "https://wa.me/$phoneNumber?text=${Uri.encodeComponent(message)}";
+    final Uri launchUri = Uri.parse(url);
+    if (await canLaunchUrl(launchUri)) {
+      await launchUrl(launchUri, mode: LaunchMode.externalApplication);
     }
   }
 
@@ -68,14 +88,45 @@ class BookingCard extends StatelessWidget {
             booking.serviceName,
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textColor),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 12),
           Row(
             children: [
               const Icon(LucideIcons.user, size: 14, color: AppTheme.secondaryTextColor),
-              const SizedBox(width: 6),
-              Text(
-                booking.customerName ?? 'No Name',
-                style: const TextStyle(color: AppTheme.secondaryTextColor, fontSize: 13),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      booking.customerName,
+                      style: const TextStyle(color: AppTheme.textColor, fontSize: 14, fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      booking.customerMobile,
+                      style: const TextStyle(color: AppTheme.secondaryTextColor, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              // Communication Buttons
+              Row(
+                children: [
+                  _buildCircleButton(
+                    icon: LucideIcons.phone,
+                    color: Colors.blue,
+                    onTap: () => _makePhoneCall(booking.customerMobile),
+                  ),
+                  const SizedBox(width: 10),
+                  _buildCircleButton(
+                    icon: LucideIcons.messageSquare,
+                    color: Colors.green,
+                    onTap: () => _launchWhatsApp(
+                      booking.customerMobile, 
+                      "Hello ${booking.customerName}, this is regarding your booking for ${booking.serviceName} on ${DateFormat('d MMM').format(booking.date)} at ${booking.startTime}."
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -109,7 +160,14 @@ class BookingCard extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () => onStatusUpdate?.call('confirmed'),
+                    onPressed: () {
+                      onStatusUpdate?.call('confirmed');
+                      // Auto-send WhatsApp confirmation
+                      _launchWhatsApp(
+                        booking.customerMobile, 
+                        "Hello ${booking.customerName}, your booking for ${booking.serviceName} on ${DateFormat('d MMM').format(booking.date)} at ${booking.startTime} has been CONFIRMED. See you soon!"
+                      );
+                    },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.accentColor,
                       foregroundColor: Colors.white,
@@ -124,6 +182,21 @@ class BookingCard extends StatelessWidget {
             ),
           ],
         ],
+      ),
+    );
+  }
+
+  Widget _buildCircleButton({required IconData icon, required Color color, required VoidCallback onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon, size: 18, color: color),
       ),
     );
   }
