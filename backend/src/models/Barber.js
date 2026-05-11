@@ -27,5 +27,10 @@ barberSchema.pre('save', async function (next) {
   this.password = await bcrypt.hash(this.password, salt);
 });
 
+// Method to compare password
+barberSchema.methods.matchPassword = async function (enteredPassword) {
+  return await bcrypt.compare(enteredPassword, this.password);
+};
+
 const Barber = mongoose.model('Barber', barberSchema);
 export default Barber;

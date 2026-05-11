@@ -105,3 +105,45 @@ export const loginBarber = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// @desc    Register a new barber
+// @route   POST /api/mobile/auth/barber/register
+// @access  Public
+export const registerBarber = async (req, res) => {
+  const { name, shopName, email, password, mobile, location, shopNumber, businessLicense, fcmToken } = req.body;
+
+  try {
+    const barberExists = await Barber.findOne({ email });
+    if (barberExists) {
+      return res.status(400).json({ message: 'Barber already exists' });
+    }
+
+    const barber = await Barber.create({
+      name,
+      shopName,
+      email,
+      password,
+      mobile,
+      location,
+      shopNumber,
+      businessLicense,
+      fcmToken
+    });
+
+    if (barber) {
+      res.status(201).json({
+        _id: barber._id,
+        name: barber.name,
+        shopName: barber.shopName,
+        email: barber.email,
+        role: 'barber',
+        token: generateToken(barber._id, 'barber'),
+      });
+    } else {
+      res.status(400).json({ message: 'Invalid barber data' });
+    }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+

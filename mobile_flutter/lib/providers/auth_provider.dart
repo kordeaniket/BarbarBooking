@@ -48,17 +48,37 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> register(String name, String email, String password, String mobile) async {
+  Future<bool> register(String name, String email, String password, String mobile, {
+    bool isBarber = false,
+    String? shopName,
+    String? city,
+    String? address,
+    String? shopNumber,
+    String? businessLicense,
+  }) async {
     try {
+      final endpoint = isBarber ? '/api/mobile/auth/barber/register' : '/api/mobile/auth/customer/register';
+      
+      final Map<String, dynamic> body = {
+        'name': name,
+        'email': email,
+        'password': password,
+        'mobile': mobile,
+      };
+
+      if (isBarber) {
+        body.addAll({
+          'shopName': shopName,
+          'location': {'city': city, 'address': address},
+          'shopNumber': shopNumber,
+          'businessLicense': businessLicense,
+        });
+      }
+
       final response = await http.post(
-        Uri.parse('${ApiService.baseUrl}/api/mobile/auth/customer/register'),
+        Uri.parse('${ApiService.baseUrl}$endpoint'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'name': name,
-          'email': email,
-          'password': password,
-          'mobile': mobile,
-        }),
+        body: jsonEncode(body),
       );
 
       if (response.statusCode == 201) {
@@ -66,7 +86,7 @@ class AuthProvider with ChangeNotifier {
         _token = data['token'];
         _userId = data['_id'];
         _userName = data['name'];
-        _role = 'customer';
+        _role = data['role'];
         
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('token', _token!);

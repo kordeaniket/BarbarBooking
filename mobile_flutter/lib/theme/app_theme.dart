@@ -49,7 +49,7 @@ class AppTheme {
         fontWeight: FontWeight.w700,
       ),
     ),
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       color: cardColor,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
