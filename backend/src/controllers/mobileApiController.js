@@ -186,7 +186,7 @@ export const getAvailableSlots = async (req, res) => {
       for (let min = 0; min < 60; min += 30) {
         const slotStart = hour * 60 + min;
         const slotEnd = slotStart + duration;
-        
+
         // Don't go past business hours
         if (slotEnd > endHour * 60) break;
 
