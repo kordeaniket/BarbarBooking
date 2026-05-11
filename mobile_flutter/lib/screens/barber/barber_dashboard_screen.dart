@@ -9,6 +9,7 @@ import '../../theme/app_theme.dart';
 import '../../models/booking.dart';
 import '../../models/barber.dart';
 import '../../services/api_service.dart';
+import '../common/profile_screen.dart';
 
 class BarberDashboardScreen extends StatefulWidget {
   const BarberDashboardScreen({super.key});
@@ -74,41 +75,20 @@ class _BarberDashboardScreenState extends State<BarberDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Barber Dashboard'),
-        actions: [
-          IconButton(
-            icon: const Icon(LucideIcons.logOut),
-            onPressed: () => Provider.of<AuthProvider>(context, listen: false).logout(),
-          ),
-        ],
-      ),
       body: _buildBody(),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: (index) => setState(() => _selectedIndex = index),
-        backgroundColor: AppTheme.cardColor,
-        selectedItemColor: AppTheme.accentColor,
-        unselectedItemColor: AppTheme.secondaryTextColor,
         items: const [
-          BottomNavigationBarItem(
-            icon: Icon(LucideIcons.inbox),
-            label: 'Requests',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(LucideIcons.calendar),
-            label: 'Schedule',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(LucideIcons.scissors),
-            label: 'Services',
-          ),
+          BottomNavigationBarItem(icon: Icon(LucideIcons.inbox), label: 'Requests'),
+          BottomNavigationBarItem(icon: Icon(LucideIcons.calendar), label: 'Schedule'),
+          BottomNavigationBarItem(icon: Icon(LucideIcons.scissors), label: 'Services'),
+          BottomNavigationBarItem(icon: Icon(LucideIcons.user), label: 'Profile'),
         ],
       ),
       floatingActionButton: _selectedIndex == 2 
         ? FloatingActionButton(
-            onPressed: _showAddServiceDialog,
-            backgroundColor: AppTheme.accentColor,
+            onPressed: () => _showServiceDialog(),
             child: const Icon(LucideIcons.plus, color: Colors.white),
           )
         : null,
@@ -117,9 +97,10 @@ class _BarberDashboardScreenState extends State<BarberDashboardScreen> {
 
   Widget _buildBody() {
     switch (_selectedIndex) {
-      case 0: return _buildRequestsTab();
-      case 1: return _buildScheduleTab();
-      case 2: return _buildServicesTab();
+      case 0: return Scaffold(appBar: AppBar(title: const Text('New Requests')), body: _buildRequestsTab());
+      case 1: return Scaffold(appBar: AppBar(title: const Text('Schedule')), body: _buildScheduleTab());
+      case 2: return Scaffold(appBar: AppBar(title: const Text('My Services')), body: _buildServicesTab());
+      case 3: return const ProfileScreen();
       default: return _buildRequestsTab();
     }
   }
@@ -137,8 +118,6 @@ class _BarberDashboardScreenState extends State<BarberDashboardScreen> {
             const Icon(LucideIcons.scissors, size: 64, color: AppTheme.mutedTextColor),
             const SizedBox(height: 16),
             const Text('No services added yet', style: TextStyle(color: AppTheme.secondaryTextColor)),
-            const SizedBox(height: 8),
-            const Text('Tap + to add a service', style: TextStyle(color: AppTheme.mutedTextColor, fontSize: 12)),
             TextButton(onPressed: _refreshServices, child: const Text('Refresh')),
           ],
         ),
@@ -157,9 +136,20 @@ class _BarberDashboardScreenState extends State<BarberDashboardScreen> {
             child: ListTile(
               leading: const Icon(LucideIcons.scissors, color: AppTheme.accentColor),
               title: Text(service.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: Text('${service.durationMinutes} minutes'),
-              trailing: Text('₹${service.defaultPrice.toStringAsFixed(0)}', 
-                style: const TextStyle(color: AppTheme.accentColor, fontWeight: FontWeight.bold, fontSize: 16)),
+              subtitle: Text('${service.durationMinutes} min • ₹${service.defaultPrice.toStringAsFixed(0)}'),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(LucideIcons.edit3, size: 20, color: AppTheme.secondaryTextColor),
+                    onPressed: () => _showServiceDialog(service: service),
+                  ),
+                  IconButton(
+                    icon: const Icon(LucideIcons.trash2, size: 20, color: Colors.red),
+                    onPressed: () => _confirmDeleteService(service),
+                  ),
+                ],
+              ),
             ),
           );
         },
@@ -167,61 +157,73 @@ class _BarberDashboardScreenState extends State<BarberDashboardScreen> {
     );
   }
 
-  void _showAddServiceDialog() {
-    final nameController = TextEditingController();
-    final priceController = TextEditingController();
-    final durationController = TextEditingController();
+  void _showServiceDialog({Service? service}) {
+    final nameController = TextEditingController(text: service?.name);
+    final priceController = TextEditingController(text: service?.defaultPrice.toStringAsFixed(0));
+    final durationController = TextEditingController(text: service?.durationMinutes.toString());
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.cardColor,
-        title: const Text('Add New Service', style: TextStyle(color: AppTheme.textColor)),
+        title: Text(service == null ? 'Add Service' : 'Edit Service'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(
-              controller: nameController, 
-              style: const TextStyle(color: AppTheme.textColor),
-              decoration: const InputDecoration(labelText: 'Service Name (e.g. Haircut)')
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: priceController, 
-              style: const TextStyle(color: AppTheme.textColor),
-              decoration: const InputDecoration(labelText: 'Price (₹)'), 
-              keyboardType: TextInputType.number
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: durationController, 
-              style: const TextStyle(color: AppTheme.textColor),
-              decoration: const InputDecoration(labelText: 'Duration (minutes)'), 
-              keyboardType: TextInputType.number
-            ),
+            TextField(controller: nameController, decoration: const InputDecoration(labelText: 'Service Name')),
+            TextField(controller: priceController, decoration: const InputDecoration(labelText: 'Price (₹)'), keyboardType: TextInputType.number),
+            TextField(controller: durationController, decoration: const InputDecoration(labelText: 'Duration (min)'), keyboardType: TextInputType.number),
           ],
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentColor),
             onPressed: () async {
-              if (nameController.text.isEmpty || priceController.text.isEmpty || durationController.text.isEmpty) {
-                return;
-              }
               final auth = Provider.of<AuthProvider>(context, listen: false);
-              final success = await _apiService.createService(auth.token!, {
+              final data = {
                 'name': nameController.text,
                 'defaultPrice': double.parse(priceController.text),
                 'durationMinutes': int.parse(durationController.text),
-              });
+              };
+
+              bool success;
+              if (service == null) {
+                success = await _apiService.createService(auth.token!, data);
+              } else {
+                success = await _apiService.updateService(auth.token!, service.id, data);
+              }
+
               if (success) {
                 Navigator.pop(context);
                 _refreshServices();
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Service added successfully')));
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(service == null ? 'Service added' : 'Service updated')));
               }
             },
-            child: const Text('Add', style: TextStyle(color: Colors.white)),
+            child: Text(service == null ? 'Add' : 'Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDeleteService(Service service) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Service'),
+        content: Text('Are you sure you want to delete "${service.name}"?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () async {
+              final auth = Provider.of<AuthProvider>(context, listen: false);
+              final success = await _apiService.deleteService(auth.token!, service.id);
+              if (success) {
+                Navigator.pop(context);
+                _refreshServices();
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Service deleted')));
+              }
+            },
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -231,40 +233,20 @@ class _BarberDashboardScreenState extends State<BarberDashboardScreen> {
   Widget _buildRequestsTab() {
     return Consumer<BookingProvider>(
       builder: (context, provider, _) {
-        if (provider.isLoading) {
-          return const Center(child: CircularProgressIndicator(color: AppTheme.accentColor));
-        }
-
+        if (provider.isLoading) return const Center(child: CircularProgressIndicator());
         final pending = provider.pendingBookings;
-
-        if (pending.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(LucideIcons.checkCircle, size: 64, color: AppTheme.mutedTextColor.withOpacity(0.5)),
-                const SizedBox(height: 16),
-                const Text('No pending requests', style: TextStyle(color: AppTheme.secondaryTextColor)),
-                const SizedBox(height: 8),
-                TextButton(onPressed: _refreshBookings, child: const Text('Refresh')),
-              ],
-            ),
-          );
-        }
+        if (pending.isEmpty) return const Center(child: Text('No pending requests'));
 
         return RefreshIndicator(
           onRefresh: _refreshBookings,
           child: ListView.builder(
             padding: const EdgeInsets.all(16),
             itemCount: pending.length,
-            itemBuilder: (context, index) {
-              final booking = pending[index];
-              return BookingCard(
-                booking: booking,
-                showActions: true,
-                onStatusUpdate: (status) => _handleStatusUpdate(booking.id, status),
-              );
-            },
+            itemBuilder: (context, index) => BookingCard(
+              booking: pending[index],
+              showActions: true,
+              onStatusUpdate: (status) => _handleStatusUpdate(pending[index].id, status),
+            ),
           ),
         );
       },
@@ -275,11 +257,7 @@ class _BarberDashboardScreenState extends State<BarberDashboardScreen> {
     return Consumer<BookingProvider>(
       builder: (context, provider, _) {
         final confirmed = provider.confirmedBookings;
-        
-        // Filter confirmed bookings for selected day
-        final dayBookings = confirmed.where((b) {
-          return isSameDay(b.date, _selectedDay);
-        }).toList();
+        final dayBookings = confirmed.where((b) => isSameDay(b.date, _selectedDay)).toList();
 
         return Column(
           children: [
@@ -289,44 +267,26 @@ class _BarberDashboardScreenState extends State<BarberDashboardScreen> {
               focusedDay: _focusedDay,
               calendarFormat: _calendarFormat,
               selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-              onDaySelected: (selectedDay, focusedDay) {
-                setState(() {
-                  _selectedDay = selectedDay;
-                  _focusedDay = focusedDay;
-                });
-              },
-              onFormatChanged: (format) {
-                setState(() {
-                  _calendarFormat = format;
-                });
-              },
-              eventLoader: (day) {
-                return confirmed.where((b) => isSameDay(b.date, day)).toList();
-              },
-              calendarStyle: CalendarStyle(
-                selectedDecoration: const BoxDecoration(color: AppTheme.accentColor, shape: BoxShape.circle),
-                todayDecoration: BoxDecoration(color: AppTheme.accentColor.withOpacity(0.5), shape: BoxShape.circle),
-                markerDecoration: const BoxDecoration(color: AppTheme.accentColor, shape: BoxShape.circle),
-              ),
-              headerStyle: const HeaderStyle(
-                formatButtonVisible: true,
-                titleCentered: true,
+              onDaySelected: (selectedDay, focusedDay) => setState(() {
+                _selectedDay = selectedDay;
+                _focusedDay = focusedDay;
+              }),
+              onFormatChanged: (format) => setState(() => _calendarFormat = format),
+              eventLoader: (day) => confirmed.where((b) => isSameDay(b.date, day)).toList(),
+              calendarStyle: const CalendarStyle(
+                selectedDecoration: BoxDecoration(color: AppTheme.accentColor, shape: BoxShape.circle),
+                todayDecoration: BoxDecoration(color: Colors.grey, shape: BoxShape.circle),
+                markerDecoration: BoxDecoration(color: AppTheme.accentColor, shape: BoxShape.circle),
               ),
             ),
-            const Divider(color: AppTheme.borderColor),
+            const Divider(),
             Expanded(
               child: dayBookings.isEmpty
-                  ? const Center(child: Text('No appointments for this day', style: TextStyle(color: AppTheme.secondaryTextColor)))
+                  ? const Center(child: Text('No appointments'))
                   : ListView.builder(
                       padding: const EdgeInsets.all(16),
                       itemCount: dayBookings.length,
-                      itemBuilder: (context, index) {
-                        final booking = dayBookings[index];
-                        return BookingCard(
-                          booking: booking,
-                          showActions: false,
-                        );
-                      },
+                      itemBuilder: (context, index) => BookingCard(booking: dayBookings[index], showActions: false),
                     ),
             ),
           ],

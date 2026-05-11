@@ -145,6 +145,46 @@ export const createBarberService = async (req, res) => {
   }
 };
 
+// @desc    Update barber service
+// @route   PUT /api/mobile/barber/services/:id
+// @access  Private (Barber)
+export const updateBarberService = async (req, res) => {
+  const { name, description, defaultPrice, durationMinutes } = req.body;
+  try {
+    const service = await Service.findOneAndUpdate(
+      { _id: req.params.id, barber: req.user._id },
+      { name, description, defaultPrice, durationMinutes },
+      { new: true }
+    );
+
+    if (!service) return res.status(404).json({ message: 'Service not found or unauthorized' });
+
+    res.json(service);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Delete barber service
+// @route   DELETE /api/mobile/barber/services/:id
+// @access  Private (Barber)
+export const deleteBarberService = async (req, res) => {
+  try {
+    const service = await Service.findOneAndDelete({ _id: req.params.id, barber: req.user._id });
+
+    if (!service) return res.status(404).json({ message: 'Service not found or unauthorized' });
+
+    // Remove from Barber's services array
+    await Barber.findByIdAndUpdate(req.user._id, {
+      $pull: { services: req.params.id }
+    });
+
+    res.json({ message: 'Service deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // @desc    Get available slots for a barber on a date
 // @route   GET /api/mobile/barbers/:id/slots
 // @access  Private

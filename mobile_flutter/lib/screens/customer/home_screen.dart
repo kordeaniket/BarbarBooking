@@ -8,6 +8,7 @@ import '../../widgets/barber_card.dart';
 import '../../widgets/booking_card.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/booking_provider.dart';
+import '../common/profile_screen.dart';
 import 'barber_details_screen.dart';
 
 class CustomerHomeScreen extends StatefulWidget {
@@ -68,18 +69,10 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Column(
-        children: [
-          _buildHeader(),
-          Expanded(child: _buildBody()),
-        ],
-      ),
+      body: _buildBody(),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: (index) => setState(() => _selectedIndex = index),
-        backgroundColor: AppTheme.cardColor,
-        selectedItemColor: AppTheme.accentColor,
-        unselectedItemColor: AppTheme.secondaryTextColor,
         items: const [
           BottomNavigationBarItem(
             icon: Icon(LucideIcons.search),
@@ -89,40 +82,59 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
             icon: Icon(LucideIcons.calendar),
             label: 'My Bookings',
           ),
+          BottomNavigationBarItem(
+            icon: Icon(LucideIcons.user),
+            label: 'Profile',
+          ),
         ],
       ),
     );
   }
 
   Widget _buildBody() {
-    if (_selectedIndex == 0) {
-      return _isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.accentColor))
-          : RefreshIndicator(
-              onRefresh: _loadBarbers,
-              color: AppTheme.accentColor,
-              child: _filteredBarbers.isEmpty
-                  ? _buildEmptyState()
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(20),
-                      itemCount: _filteredBarbers.length,
-                      itemBuilder: (context, index) {
-                        return BarberCard(
-                          barber: _filteredBarbers[index],
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => BarberDetailsScreen(barber: _filteredBarbers[index]),
-                              ),
-                            );
-                          },
-                        );
-                      },
+    switch (_selectedIndex) {
+      case 0:
+        return Column(
+          children: [
+            _buildHeader(),
+            Expanded(
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator(color: AppTheme.accentColor))
+                  : RefreshIndicator(
+                      onRefresh: _loadBarbers,
+                      color: AppTheme.accentColor,
+                      child: _filteredBarbers.isEmpty
+                          ? _buildEmptyState()
+                          : ListView.builder(
+                              padding: const EdgeInsets.all(20),
+                              itemCount: _filteredBarbers.length,
+                              itemBuilder: (context, index) {
+                                return BarberCard(
+                                  barber: _filteredBarbers[index],
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => BarberDetailsScreen(barber: _filteredBarbers[index]),
+                                      ),
+                                    );
+                                  },
+                                );
+                              },
+                            ),
                     ),
-            );
-    } else {
-      return _buildMyBookingsTab();
+            ),
+          ],
+        );
+      case 1:
+        return Scaffold(
+          appBar: AppBar(title: const Text('My Bookings')),
+          body: _buildMyBookingsTab(),
+        );
+      case 2:
+        return const ProfileScreen();
+      default:
+        return const Center(child: Text('Coming Soon'));
     }
   }
 
@@ -159,7 +171,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
               final booking = bookings[index];
               return BookingCard(
                 booking: booking,
-                showActions: false, // Customer can't approve/reject their own bookings
+                showActions: false,
               );
             },
           ),
@@ -167,51 +179,30 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
       },
     );
   }
-// ...
 
   Widget _buildHeader() {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 60, 24, 32),
       decoration: BoxDecoration(
-        color: AppTheme.cardColor,
+        color: Theme.of(context).cardColor,
         borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(32), bottomRight: Radius.circular(32)),
         boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Welcome,', style: TextStyle(color: AppTheme.secondaryTextColor, fontSize: 14)),
-                  Text(auth.name ?? 'Guest', style: const TextStyle(color: AppTheme.textColor, fontSize: 24, fontWeight: FontWeight.bold)),
-                ],
-              ),
-              IconButton(
-                icon: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: AppTheme.borderColor, borderRadius: BorderRadius.circular(12)),
-                  child: const Icon(LucideIcons.logOut, color: AppTheme.secondaryTextColor, size: 20),
-                ),
-                onPressed: () => Provider.of<AuthProvider>(context, listen: false).logout(),
-              ),
-            ],
-          ),
+          Text('Welcome,', style: TextStyle(color: Theme.of(context).hintColor, fontSize: 14)),
+          Text(auth.name ?? 'Guest', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
           const SizedBox(height: 24),
           TextField(
             controller: _searchController,
             onChanged: _handleSearch,
-            style: const TextStyle(color: AppTheme.textColor),
             decoration: InputDecoration(
               hintText: 'Search shops, services or cities',
-              hintStyle: const TextStyle(color: AppTheme.mutedTextColor),
               prefixIcon: const Icon(LucideIcons.search, size: 20, color: AppTheme.accentColor),
               filled: true,
-              fillColor: AppTheme.backgroundColor,
+              fillColor: Theme.of(context).scaffoldBackgroundColor,
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
             ),
           ),

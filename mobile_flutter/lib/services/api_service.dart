@@ -107,5 +107,33 @@ class ApiService {
       print('Error fetching barber services: $e');
       return [];
     }
+  Future<bool> updateService(String token, String serviceId, Map<String, dynamic> serviceData) async {
+    try {
+      final response = await http.put(
+        Uri.parse('$baseUrl/api/mobile/barber/services/$serviceId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: json.encode(serviceData),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      print('Error updating service: $e');
+      return false;
+    }
+  }
+
+  Future<bool> deleteService(String token, String serviceId) async {
+    try {
+      final response = await http.delete(
+        Uri.parse('$baseUrl/api/mobile/barber/services/$serviceId'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      print('Error deleting service: $e');
+      return false;
+    }
   }
 }
