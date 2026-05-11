@@ -170,14 +170,13 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
 // ...
 
   Widget _buildHeader() {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
     return Container(
-      padding: const EdgeInsets.fromLTRB(24, 60, 24, 24),
-      decoration: const BoxDecoration(
+      padding: const EdgeInsets.fromLTRB(24, 60, 24, 32),
+      decoration: BoxDecoration(
         color: AppTheme.cardColor,
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(24),
-          bottomRight: Radius.circular(24),
-        ),
+        borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(32), bottomRight: Radius.circular(32)),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -185,24 +184,35 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Find a Barber',
-                style: Theme.of(context).textTheme.headlineMedium,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Welcome,', style: TextStyle(color: AppTheme.secondaryTextColor, fontSize: 14)),
+                  Text(auth.name ?? 'Guest', style: const TextStyle(color: AppTheme.textColor, fontSize: 24, fontWeight: FontWeight.bold)),
+                ],
               ),
               IconButton(
-                icon: const Icon(LucideIcons.logOut, color: AppTheme.secondaryTextColor),
+                icon: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(color: AppTheme.borderColor, borderRadius: BorderRadius.circular(12)),
+                  child: const Icon(LucideIcons.logOut, color: AppTheme.secondaryTextColor, size: 20),
+                ),
                 onPressed: () => Provider.of<AuthProvider>(context, listen: false).logout(),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
           TextField(
             controller: _searchController,
             onChanged: _handleSearch,
             style: const TextStyle(color: AppTheme.textColor),
-            decoration: const InputDecoration(
-              hintText: 'Search by shop or city',
-              prefixIcon: Icon(LucideIcons.search, size: 20),
+            decoration: InputDecoration(
+              hintText: 'Search shops, services or cities',
+              hintStyle: const TextStyle(color: AppTheme.mutedTextColor),
+              prefixIcon: const Icon(LucideIcons.search, size: 20, color: AppTheme.accentColor),
+              filled: true,
+              fillColor: AppTheme.backgroundColor,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
             ),
           ),
         ],

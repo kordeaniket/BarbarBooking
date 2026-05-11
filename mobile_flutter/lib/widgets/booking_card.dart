@@ -1,158 +1,140 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:intl/intl.dart';
 import '../models/booking.dart';
 import '../theme/app_theme.dart';
 
 class BookingCard extends StatelessWidget {
   final Booking booking;
-  final VoidCallback? onApprove;
-  final VoidCallback? onReject;
   final bool showActions;
+  final Function(String)? onStatusUpdate;
 
   const BookingCard({
     super.key,
     required this.booking,
-    this.onApprove,
-    this.onReject,
-    this.showActions = true,
+    this.showActions = false,
+    this.onStatusUpdate,
   });
+
+  Color _getStatusColor() {
+    switch (booking.status.toLowerCase()) {
+      case 'pending': return Colors.orange;
+      case 'confirmed': return Colors.green;
+      case 'completed': return AppTheme.accentColor;
+      case 'cancelled':
+      case 'rejected': return Colors.red;
+      default: return AppTheme.secondaryTextColor;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final dateFormat = DateFormat('EEE, MMM d, yyyy');
-    
-    return Card(
+    return Container(
       margin: const EdgeInsets.only(bottom: 16),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        booking.customerName,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.textColor,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        booking.customerMobile,
-                        style: const TextStyle(
-                          color: AppTheme.secondaryTextColor,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  ),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppTheme.cardColor,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppTheme.borderColor),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 4)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: _getStatusColor().withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: _getStatusColor(booking.status).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: _getStatusColor(booking.status).withOpacity(0.5)),
-                  ),
-                  child: Text(
-                    booking.status.toUpperCase(),
-                    style: TextStyle(
-                      color: _getStatusColor(booking.status),
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                child: Text(
+                  booking.status.toUpperCase(),
+                  style: TextStyle(color: _getStatusColor(), fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1),
                 ),
-              ],
-            ),
-            const Divider(height: 24, color: AppTheme.borderColor),
-            Row(
-              children: [
-                const Icon(LucideIcons.scissors, size: 16, color: AppTheme.accentColor),
-                const SizedBox(width: 8),
-                Text(
-                  booking.serviceName,
-                  style: const TextStyle(color: AppTheme.textColor),
-                ),
-                const Spacer(),
-                Text(
-                  '₹${booking.servicePrice.toStringAsFixed(0)}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.textColor,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                const Icon(LucideIcons.calendar, size: 16, color: AppTheme.secondaryTextColor),
-                const SizedBox(width: 8),
-                Text(
-                  dateFormat.format(booking.date),
-                  style: const TextStyle(color: AppTheme.secondaryTextColor, fontSize: 14),
-                ),
-                const SizedBox(width: 16),
-                const Icon(LucideIcons.clock, size: 16, color: AppTheme.secondaryTextColor),
-                const SizedBox(width: 8),
-                Text(
-                  booking.startTime,
-                  style: const TextStyle(color: AppTheme.secondaryTextColor, fontSize: 14),
-                ),
-              ],
-            ),
-            if (showActions && booking.status == 'pending') ...[
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: onReject,
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Colors.redAccent),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                      child: const Text('Reject', style: TextStyle(color: Colors.redAccent)),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: onApprove,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                      child: const Text('Approve', style: TextStyle(color: Colors.white)),
-                    ),
-                  ),
-                ],
+              ),
+              Text(
+                '₹${booking.servicePrice.toStringAsFixed(0)}',
+                style: const TextStyle(color: AppTheme.textColor, fontWeight: FontWeight.bold, fontSize: 18),
               ),
             ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            booking.serviceName,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textColor),
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              const Icon(LucideIcons.user, size: 14, color: AppTheme.secondaryTextColor),
+              const SizedBox(width: 6),
+              Text(
+                booking.customerName ?? 'No Name',
+                style: const TextStyle(color: AppTheme.secondaryTextColor, fontSize: 13),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          const Divider(color: AppTheme.borderColor),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              _buildMetaInfo(LucideIcons.calendar, DateFormat('d MMM, yyyy').format(booking.date)),
+              const SizedBox(width: 20),
+              _buildMetaInfo(LucideIcons.clock, booking.startTime),
+            ],
+          ),
+          if (showActions && booking.status == 'pending') ...[
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => onStatusUpdate?.call('rejected'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red.withOpacity(0.1),
+                      foregroundColor: Colors.red,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    child: const Text('Reject', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => onStatusUpdate?.call('confirmed'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.accentColor,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    child: const Text('Approve', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
+            ),
           ],
-        ),
+        ],
       ),
     );
   }
 
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'pending': return Colors.orange;
-      case 'confirmed': return Colors.green;
-      case 'completed': return Colors.blue;
-      case 'cancelled': return Colors.red;
-      default: return Colors.grey;
-    }
+  Widget _buildMetaInfo(IconData icon, String text) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: AppTheme.accentColor),
+        const SizedBox(width: 8),
+        Text(text, style: const TextStyle(color: AppTheme.textColor, fontSize: 13, fontWeight: FontWeight.w500)),
+      ],
+    );
   }
 }

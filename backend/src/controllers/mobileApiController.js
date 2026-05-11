@@ -161,18 +161,43 @@ export const getAvailableSlots = async (req, res) => {
       status: { $in: ['pending', 'confirmed'] }
     });
 
-    // Simple slot generation: 09:00 to 18:00
+    // Business hours: 09:00 to 20:00
     const startHour = 9;
-    const endHour = 18;
+    const endHour = 20;
     const slots = [];
+
+    // Helper to convert HH:mm to minutes from midnight
+    const toMinutes = (timeStr) => {
+      const [h, m] = timeStr.split(':').map(Number);
+      return h * 60 + m;
+    };
+
+    // Prepare booked time ranges
+    const bookedRanges = bookings.map(b => {
+      // For now, assume bookings have durations. If not, default to 30m.
+      // We'd ideally populate the service for each booking here.
+      return {
+        start: toMinutes(b.startTime),
+        end: toMinutes(b.startTime) + 30 // Default 30m if duration not in booking
+      };
+    });
 
     for (let hour = startHour; hour < endHour; hour++) {
       for (let min = 0; min < 60; min += 30) {
+        const slotStart = hour * 60 + min;
+        const slotEnd = slotStart + duration;
+        
+        // Don't go past business hours
+        if (slotEnd > endHour * 60) break;
+
         const time = `${hour.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`;
 
-        // Check if slot overlaps with any booking
-        const isOccupied = bookings.some(b => b.startTime === time);
-        if (!isOccupied) {
+        // Check if this range [slotStart, slotEnd] overlaps with any booking
+        const isConflict = bookedRanges.some(range => {
+          return (slotStart < range.end && slotEnd > range.start);
+        });
+
+        if (!isConflict) {
           slots.push(time);
         }
       }
